@@ -1,0 +1,24 @@
+﻿<NavLink class="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition cursor-pointer relative" href="@GetLink()" disabled="@(!RendererInfo.IsInteractive || IsComingSoon)">
+    <h2 class="text-xl font-semibold mb-2">@Title</h2>
+    <p class="text-gray-600 mb-4">@Description</p>
+    @if (IsComingSoon)
+    {
+        <div class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">Coming Soon</div>
+    }
+</NavLink>
+
+
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public string Link { get; set; } = "";
+    [Parameter] public bool IsComingSoon { get; set; } = false;
+
+    private string GetLink() {
+        if (IsComingSoon)
+            return "#";
+        else
+            return Link;
+    }
+}

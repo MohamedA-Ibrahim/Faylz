@@ -1,9 +1,44 @@
 ﻿@page "/"
+@using Pages
+<PageTitle>Faylz - Tools that run locally on your machine</PageTitle>
 
-<PageTitle>Home</PageTitle>
+<div class="container mx-auto p-6 relative">
+    <h1 class="text-4xl font-bold text-center mb-8">Offline Tools</h1>
+    <p class="text-center text-lg text-gray-600 mb-8">A collection of tools for various file conversions, optimizations, and utilities.</p>
 
-<h1 class="text-3xl font-bold text-red-700">
-    Hello world!
-</h1>
+    @if (!RendererInfo.IsInteractive)
+    {
+        <div class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/30 backdrop-opacity-80 ">
+            <div class="text-2xl font-bold text-gray-800 animate-bounce">Loading your tools...</div>
+            <div class="mt-4 flex space-x-2">
+                <div class="w-5 h-5 bg-blue-500 rounded-full animate-bounce delay-100"></div>
+                <div class="w-5 h-5 bg-green-500 rounded-full animate-bounce delay-200"></div>
+                <div class="w-5 h-5 bg-red-500 rounded-full animate-bounce delay-300"></div>
+                <div class="w-5 h-5 bg-yellow-500 rounded-full animate-bounce delay-400"></div>
+            </div>
+            <div class="mt-4 text-sm text-gray-700 animate-pulse">Hang tight, we're getting things ready!</div>
+        </div>
+    }
 
-<h2 class="text-blue-800 text-3xl">Hello</h2>
+    <h2 class="text-2xl font-bold mb-4 text-blue-500">Image Tools</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <ToolCard Title="Compress JPG" Description="Reduce the file size of JPG images." Link="/jpg/compress" />
+        <ToolCard Title="Compress PNG" Description="Reduce the file size of PNG images." Link="/png/compress" IsComingSoon="true" />
+        <ToolCard Title="JPG to PNG" Description="Convert JPG images to PNG format." Link="/jpg-png" IsComingSoon="true" />
+        <ToolCard Title="PNG to JPG" Description="Convert PNG images to JPG format." Link="/png-jpg" IsComingSoon="true" />
+        <ToolCard Title="Resize Image" Description="Resize images while maintaining quality." Link="#" IsComingSoon="true" />
+    </div>
+
+    <h2 class="text-2xl font-bold mt-8 mb-4 text-blue-500">Document Tools</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <ToolCard Title="PDF to Word" Description="Convert PDF documents to editable Word format." Link="/pdf-word" IsComingSoon="true" />
+        <ToolCard Title="Word to PDF" Description="Convert Word documents to PDF format." Link="/word-pdf" IsComingSoon="true" />
+        <ToolCard Title="Merge PDFs" Description="Combine multiple PDFs into one." Link="/pdf/merge" IsComingSoon="true" />
+        <ToolCard Title="Split PDF" Description="Split a PDF into multiple files." Link="/pdf/split" IsComingSoon="true" />
+    </div>
+</div>
+
+
+@code {
+    public record Tool(string Title, string Description, string Link);
+}
