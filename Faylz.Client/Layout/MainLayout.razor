@@ -1,23 +1,23 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="min-h-screen flex flex-col bg-gray-50">
-    <header class="bg-white shadow-sm">
-        <nav class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <a href="/" class="flex items-center space-x-2">
+    <header class="bg-white shadow-sm" role="banner">
+        <nav class="container mx-auto px-4 py-3 flex justify-between items-center" aria-label="Main navigation">
+            <a href="/" class="flex items-center space-x-2" aria-label="Homepage">
                 <span class="text-2xl font-bold text-blue-600">Faylz</span>
             </a>
             <div class="flex space-x-4 items-center">
-                <NavLink href="/" class="text-gray-600 hover:text-blue-600 transition">Home</NavLink>
-                <NavLink href="/about" class="text-gray-600 hover:text-blue-600 transition">About</NavLink>
+                <NavLink href="/" class="text-gray-600 hover:text-blue-600 transition" ActiveClass="text-blue-600 font-medium" Match="NavLinkMatch.All">Home</NavLink>
+                <NavLink href="/about" class="text-gray-600 hover:text-blue-600 transition" ActiveClass="text-blue-600 font-medium">About</NavLink>
             </div>
         </nav>
     </header>
 
-    <main class="flex-grow">
+    <main class="flex-grow" role="main" id="main-content">
         @Body
     </main>
 
-    <footer class="bg-gray-800 text-white py-8">
+    <footer class="bg-gray-800 text-white py-8" role="contentinfo">
         <div class="container mx-auto px-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
@@ -26,15 +26,15 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-semibold mb-3">Tools</h3>
-                    <ul class="space-y-2 text-sm text-gray-300">
+                    <ul class="space-y-2 text-sm text-gray-300" aria-label="Tool links">
                         <li><a href="/jpg/compress" class="hover:text-blue-400 transition">JPG Compression</a></li>
-                        <li><a href="#" class="hover:text-blue-400 transition">PNG Compression</a></li>
-                        <li><a href="#" class="hover:text-blue-400 transition">PDF Tools</a></li>
+                        <li><a href="/png/compress" class="hover:text-blue-400 transition">PNG Compression</a></li>
+                        <li><a href="/pdf/merge" class="hover:text-blue-400 transition">PDF Tools</a></li>
                     </ul>
                 </div>
                 <div>
                     <h3 class="text-lg font-semibold mb-3">Links</h3>
-                    <ul class="space-y-2 text-sm text-gray-300">
+                    <ul class="space-y-2 text-sm text-gray-300" aria-label="Site links">
                         <li><a href="/about" class="hover:text-blue-400 transition">About</a></li>
                         <li><a href="/privacy" class="hover:text-blue-400 transition">Privacy Policy</a></li>
                     </ul>
@@ -47,10 +47,10 @@
     </footer>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet class="fixed bottom-0 left-0 right-0 bg-red-600 text-white p-3 z-50 shadow-lg flex justify-between items-center">
+<div id="blazor-error-ui" data-nosnippet class="fixed bottom-0 left-0 right-0 bg-red-600 text-white p-3 z-50 shadow-lg flex justify-between items-center" aria-live="assertive">
     <span>An unhandled error has occurred.</span>
     <div class="flex space-x-2">
         <a href="." class="bg-white text-red-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100 transition">Reload</a>
-        <button class="text-white hover:text-gray-200 transition dismiss">×</button>
+        <button class="text-white hover:text-gray-200 transition dismiss" aria-label="Dismiss error">×</button>
     </div>
 </div>

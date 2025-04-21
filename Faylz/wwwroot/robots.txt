@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /css/
+Disallow: /_framework/
+
+Sitemap: https://faylz.com/sitemap.xml 
