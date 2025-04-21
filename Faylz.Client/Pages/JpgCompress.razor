@@ -186,7 +186,7 @@
     private InputFile? inputFile;
     private List<UploadedFile> UploadedFiles = new();
     private int CompressionProgress = 0;
-    private long maxFileSize = 1024 * 1024 * 15; // 15MB
+    private readonly long maxFileSize = 1024 * 1024 * 15; // 15MB
     private int Quality = 50; // Default quality setting
     private bool isDragging = false;
     private bool isCompressing = false;
