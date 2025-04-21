@@ -12,6 +12,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Faylz.Client\Faylz.Client.csproj" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.4" />
 	</ItemGroup>
 </Project>
