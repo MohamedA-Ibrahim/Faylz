@@ -1,0 +1,184 @@
+﻿@page "/jpg/compress"
+
+@using System.IO;
+@using System.IO.Compression;
+@using Microsoft.AspNetCore.Components.Forms;
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.Formats.Jpeg
+@using SixLabors.ImageSharp.Processing
+@using SixLabors.ImageSharp.Processing.Processors.Transforms
+@using SkiaSharp
+@using Microsoft.JSInterop;
+
+<PageTitle>Compress JPG Images</PageTitle>
+
+<div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold text-center mb-4">Compress JPG Images</h1>
+    <p class="text-center text-gray-600 mb-6">Drag and drop your JPG images to compress them.</p>
+
+    <div class="border-2 border-dashed border-gray-300 p-6 text-center rounded-lg relative" ondrop="dropHandler(event)" ondragover="allowDrop(event)">
+        <p class="text-gray-500">Drag and drop images here or click to select files</p>
+        <InputFile multiple accept="image/jpeg" OnChange="OnFileSelected" class="absolute inset-0 opacity-0 cursor-pointer" />
+    </div>
+
+    <div class="mt-6" hidden="@(UploadedFiles.Count == 0)">
+        <p class="text-gray-700">Total Images: @UploadedFiles.Count</p>
+        <progress class="w-full h-3 mt-2" max="100" value="@CompressionProgress"></progress>
+
+        <ul class="mt-4 space-y-3">
+            @foreach (var file in UploadedFiles)
+            {
+                <li class="bg-white p-3 rounded-lg shadow-md flex justify-between items-center">
+                    <span>@file.FileName</span>
+                    @if (file.IsCompressed)
+                    {
+                        <a class="text-blue-500"  download>Download</a>
+                        <span>@file.CompressedUrl</span>
+                    }
+                    else
+                    {
+                        <span class="text-yellow-500">Processing...</span>
+                    }
+                </li>
+            }
+        </ul>
+
+        <button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition" @onclick="CompressImages">Compress</button>
+    </div>
+
+    @*   @if (AllCompressed)
+    {
+        <div class="mt-6 text-center">
+            <a class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition" href="@ZipDownloadUrl" download>Download All as ZIP</a>
+        </div>
+    } *@
+</div>
+
+@code {
+    private List<UploadedFile> UploadedFiles = new();
+    private int CompressionProgress = 0;
+    private bool AllCompressed => UploadedFiles.All(f => f.IsCompressed);
+    // private string ZipDownloadUrl = "";
+
+    private long maxFileSize = 1024 * 1024 * 15;
+
+
+
+    private async Task CompressImages()
+    {
+        CompressionProgress = 0;
+        //string zipPath = Path.Combine(Path.GetTempPath(), "compressed_images.zip");
+
+        foreach (var file in UploadedFiles)
+        {
+            var compressedFilePath = await CompressJpg(file.File);
+            file.IsCompressed = true;
+            file.CompressedUrl = compressedFilePath;
+
+            CompressionProgress += 100 / UploadedFiles.Count;
+        }
+        // using (var zipArchive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+        // {
+
+        // }
+        //ZipDownloadUrl = zipPath;
+    }
+
+
+    private async Task<string> CompressJpg(IBrowserFile file)
+    {
+        var tempFilePath = Path.GetTempFileName();
+
+        //using var inputStream = file.OpenReadStream(maxFileSize);
+        //using var skImage = SKBitmap.Decode(inputStream);
+        //using var image = SKImage.FromBitmap(skImage);
+        //using var data = image.Encode(SKEncodedImageFormat.Jpeg, 50);
+
+        var bytes = await ConvertImageToByteArray(file);
+        await File.WriteAllBytesAsync(tempFilePath, bytes);
+
+        return tempFilePath;
+    }
+    private class UploadedFile
+    {
+        public string FileName { get; set; } = "";
+        public IBrowserFile? File { get; set; }
+        public bool IsCompressed { get; set; } = false;
+        public string CompressedUrl { get; set; } = "";
+    }
+
+    private async Task<byte[]> ConvertImageToByteArray(IBrowserFile inputImage)
+    {
+        byte[] result = null;
+
+        // memory stream
+        using (var memoryStream = new MemoryStream())
+        using (var image = await Image.LoadAsync(inputImage.OpenReadStream(maxFileSize))) // IFormFile inputImage
+        {
+            //var before = memoryStream.Length; Removed this, assuming you are using for debugging?
+            var beforeMutations = image.Size;
+
+            // dummy resize options
+            int width = 50;
+            int height = 100;
+            IResampler sampler = KnownResamplers.Lanczos3;
+            bool compand = true;
+            ResizeMode mode = ResizeMode.Stretch;
+
+            // init resize object
+            var resizeOptions = new ResizeOptions
+                {
+                    Size = new Size(width, height),
+                    Sampler = sampler,
+                    Compand = compand,
+                    Mode = mode
+                };
+
+            // mutate image
+            image.Mutate(x => x
+                 .Resize(resizeOptions)
+                 .Rotate(35));
+
+            var afterMutations = image.Size;
+
+            //Encode here for quality
+            var encoder = new JpegEncoder()
+                {
+                    Quality = 30 //Use variable to set between 5-30 based on your requirements
+                };
+
+            //This saves to the memoryStream with encoder
+            image.Save(memoryStream, encoder);
+            memoryStream.Position = 0; // The position needs to be reset.
+
+            // prepare result to byte[]
+            result = memoryStream.ToArray();
+
+            return result;
+        }
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+
+        foreach (var file in e.GetMultipleFiles())
+        {
+            UploadedFiles.Add(new UploadedFile { FileName = file.Name, File = file });
+        }
+    }
+
+}
+
+<script>
+    function allowDrop(ev) {
+        ev.preventDefault();
+    }
+
+    function dropHandler(ev) {
+        ev.preventDefault();
+        let files = ev.dataTransfer.files;
+        if (files.length > 0) {
+            DotNet.invokeMethodAsync('Faylz.Client', 'OnFileSelected', files);
+        }
+    }
+</script>

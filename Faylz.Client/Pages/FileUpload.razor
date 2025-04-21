@@ -1,0 +1,27 @@
+﻿@page "/file-upload"
+@inject ILogger<FileUpload> Logger
+@inject IJSRuntime JS
+
+<PageTitle>File Upload 1</PageTitle>
+<h1>File Upload Example 1</h1>
+
+
+<InputFile @ref="inputFile" OnChange="ShowPreview" />
+<img @ref="previewImageElem" />
+
+@code {
+
+    private InputFile? inputFile;
+    private ElementReference previewImageElem;
+
+    private async Task ShowPreview() => await JS.InvokeVoidAsync(
+       "previewImage", inputFile!.Element, previewImageElem);
+}
+
+<script>
+            window.previewImage = (inputElem, imgElem) => {
+      const url = URL.createObjectURL(inputElem.files[0]);
+      imgElem.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+      imgElem.src = url;
+    }
+</script>
