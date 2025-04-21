@@ -2,7 +2,7 @@
 @using Faylz.Client.Models
 @inject Faylz.Client.Services.FileService FileService
 
-<div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-blue-50 transition-colors duration-150 @(isDragging ? "bg-blue-50 border-blue-300" : "")" 
+<div class="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-blue-50 transition-colors duration-150 @(isDragging ? "bg-blue-50 border-blue-300" : "")" 
     @ondragenter="HandleDragEnter" 
     @ondragleave="HandleDragLeave"
     @ondragover:preventDefault
@@ -17,7 +17,7 @@
         <div class="text-gray-500 text-sm">or click to select files</div>
     </div>
     
-    <InputFile OnChange="HandleFileSelected" accept="@Accept" multiple="@Multiple" class="w-full h-full opacity-0 cursor-pointer" />
+    <InputFile OnChange="HandleFileSelected" accept="@Accept" multiple="@Multiple" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
 </div>
 
 @code {
