@@ -1,0 +1,328 @@
+@page "/pdf/merge"
+
+@using System.IO
+@using System.Collections.Generic
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using Faylz.Client.Models
+@using Faylz.Client.Services
+@inject IJSRuntime JS
+@inject FileService FileService
+
+<PageTitle>Merge PDF Files | Faylz</PageTitle>
+
+<div class="bg-gradient-to-b from-blue-50 to-white pt-12 pb-6">
+    <div class="container mx-auto px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="mb-8 text-center">
+                <h1 class="text-3xl font-bold mb-4">Merge PDF Files</h1>
+                <p class="text-gray-600 max-w-2xl mx-auto">Combine multiple PDF documents into a single file. Rearrange pages and customize the output.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
+                <div>
+                    <h2 class="text-xl font-semibold mb-6">Upload PDF Files</h2>
+                    @if (isLoading)
+                    {
+                        <div class="flex items-center justify-center p-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
+                            <span>Processing files...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <FileUploader 
+                            Accept="application/pdf" 
+                            AcceptLabel="PDF" 
+                            MaxFileSize="@MaxFileSize" 
+                            OnFilesProcessed="OnFilesProcessed" />
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (UploadedFiles.Count > 0)
+        {
+            <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100 mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold">Your PDF Files</h2>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">@UploadedFiles.Count files</span>
+                </div>
+
+                <div class="space-y-4 mb-6">
+                    <div class="text-sm text-gray-600 mb-2">Drag and drop to reorder files:</div>
+                    
+                    <div class="space-y-3">
+                        @for (int i = 0; i < UploadedFiles.Count; i++)
+                        {
+                            var file = UploadedFiles[i];
+                            var index = i;
+                            
+                            <div class="flex items-center border border-gray-200 rounded-lg p-3 bg-white">
+                                <div class="flex items-center space-x-3 flex-1">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <span class="text-gray-500 text-sm font-medium">@(index + 1)</span>
+                                        <div class="flex space-x-1">
+                                            @if (index > 0)
+                                            {
+                                                <button @onclick="() => MoveFileUp(index)" class="text-gray-500 hover:text-blue-600 focus:outline-none">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                                                    </svg>
+                                                </button>
+                                            }
+                                            @if (index < UploadedFiles.Count - 1)
+                                            {
+                                                <button @onclick="() => MoveFileDown(index)" class="text-gray-500 hover:text-blue-600 focus:outline-none">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-3 flex-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900 truncate max-w-xs">@file.FileName</div>
+                                            <div class="text-xs text-gray-500">@FormatFileSize(file.OriginalSize)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button @onclick="() => RemoveFile(index)" class="text-gray-500 hover:text-red-600 focus:outline-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-3">
+                    <div class="flex-1">
+                        <label for="outputFilename" class="block text-sm font-medium text-gray-700 mb-1">Output Filename</label>
+                        <div class="flex">
+                            <input type="text" id="outputFilename" @bind="OutputFilename" class="flex-1 rounded-l-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none" placeholder="merged_document" />
+                            <span class="inline-flex items-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 sm:text-sm">.pdf</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button @onclick="MergeFiles" disabled="@(isMerging || UploadedFiles.Count < 2)" class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition flex justify-center items-center">
+                            @if (isMerging)
+                            {
+                                <div class="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span>Merging...</span>
+                            }
+                            else
+                            {
+                                <span>Merge PDF Files</span>
+                            }
+                        </button>
+                        
+                        <button @onclick="ClearAllFiles" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition">
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
+            <h2 class="text-xl font-semibold mb-4">About PDF Merging</h2>
+            <div class="prose prose-blue max-w-none">
+                <p>Our PDF merger tool allows you to combine multiple PDF files into a single document. Here's what you can do:</p>
+                <ul>
+                    <li><strong>Reorder files:</strong> Drag and drop to arrange files in your preferred order.</li>
+                    <li><strong>Custom filename:</strong> Choose a name for your merged PDF file.</li>
+                    <li><strong>Large files:</strong> Process PDFs up to 50MB in size.</li>
+                </ul>
+                <div class="mt-4 bg-yellow-50 p-4 rounded-lg">
+                    <p class="text-yellow-800 font-medium">Note: PDF merging happens entirely in your browser.</p>
+                    <p class="text-yellow-700 text-sm">Your files never leave your device, ensuring complete privacy. For very large files, please be patient as processing may take a moment.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<UploadedFile> UploadedFiles = new();
+    private readonly long MaxFileSize = 1024 * 1024 * 50; // 50MB for PDFs
+    private bool isLoading = false;
+    private bool isMerging = false;
+    private string OutputFilename = "merged_document";
+
+    private void ClearAllFiles()
+    {
+        UploadedFiles.Clear();
+    }
+
+    private void RemoveFile(int index)
+    {
+        if (index >= 0 && index < UploadedFiles.Count)
+        {
+            UploadedFiles.RemoveAt(index);
+        }
+    }
+
+    private void MoveFileUp(int index)
+    {
+        if (index > 0 && index < UploadedFiles.Count)
+        {
+            var file = UploadedFiles[index];
+            UploadedFiles.RemoveAt(index);
+            UploadedFiles.Insert(index - 1, file);
+        }
+    }
+
+    private void MoveFileDown(int index)
+    {
+        if (index >= 0 && index < UploadedFiles.Count - 1)
+        {
+            var file = UploadedFiles[index];
+            UploadedFiles.RemoveAt(index);
+            UploadedFiles.Insert(index + 1, file);
+        }
+    }
+
+    private async Task OnFilesProcessed(List<UploadedFile> files)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            foreach (var file in files)
+            {
+                if (file.ContentType.ToLower() == "application/pdf")
+                {
+                    UploadedFiles.Add(file);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing files: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task MergeFiles()
+    {
+        if (UploadedFiles.Count < 2 || isMerging) return;
+
+        try
+        {
+            isMerging = true;
+            StateHasChanged();
+
+            // Since this is a browser-only app without server integration yet,
+            // we'll use JavaScript interop to combine the PDF files
+            // For now, we'll implement a simple version that uses JavaScript
+            
+            await InitializePdfLib();
+            
+            // Get all PDF files as array of arrays
+            var pdfFiles = UploadedFiles.Select(f => f.FileData).ToArray();
+            
+            // Call our JS function to merge PDFs
+            var mergedPdfBytes = await JS.InvokeAsync<byte[]>("mergePdfs", (object)pdfFiles);
+            
+            // Download the merged file
+            string filename = string.IsNullOrWhiteSpace(OutputFilename) ? "merged_document.pdf" : $"{OutputFilename}.pdf";
+            await FileService.DownloadFile(mergedPdfBytes, "application/pdf", filename);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error merging PDFs: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Error merging PDFs: {ex.Message}");
+        }
+        finally
+        {
+            isMerging = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task InitializePdfLib()
+    {
+        // We need to use pdf-lib.js for merging PDFs in the browser
+        // This is normally loaded via script tag in index.html, but we could also load it dynamically
+        await JS.InvokeVoidAsync("eval", @"
+            if (typeof window.mergePdfs !== 'function') {
+                // Load pdf-lib if not already loaded
+                if (typeof PDFLib === 'undefined') {
+                    return new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    }).then(() => {
+                        // Define merge function after library is loaded
+                        defineMergeFunction();
+                    });
+                } else {
+                    defineMergeFunction();
+                }
+            }
+            
+            function defineMergeFunction() {
+                window.mergePdfs = async function(pdfArrays) {
+                    try {
+                        const { PDFDocument } = PDFLib;
+                        
+                        // Create a new PDF document
+                        const mergedPdf = await PDFDocument.create();
+                        
+                        // For each Uint8Array of PDF data, create a PDFDocument and copy its pages
+                        for (let i = 0; i < pdfArrays.length; i++) {
+                            const pdf = await PDFDocument.load(pdfArrays[i]);
+                            const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                            copiedPages.forEach(page => mergedPdf.addPage(page));
+                        }
+                        
+                        // Serialize the merged PDF to bytes
+                        const mergedPdfBytes = await mergedPdf.save();
+                        return new Uint8Array(mergedPdfBytes);
+                    } catch (error) {
+                        console.error('Error merging PDFs:', error);
+                        throw error;
+                    }
+                };
+            }
+        ");
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+} 

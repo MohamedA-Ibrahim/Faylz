@@ -1,4 +1,4 @@
-﻿@page "/jpg/compress"
+@page "/png/compress"
 
 @using System.IO;
 @using System.IO.Compression;
@@ -10,14 +10,14 @@
 @inject IJSRuntime JS
 @inject FileService FileService
 
-<PageTitle>Compress JPG Images | Faylz</PageTitle>
+<PageTitle>Compress PNG Images | Faylz</PageTitle>
 
 <div class="bg-gradient-to-b from-blue-50 to-white pt-12 pb-6">
     <div class="container mx-auto px-4">
         <div class="max-w-4xl mx-auto">
             <div class="mb-8 text-center">
-                <h1 class="text-3xl font-bold mb-4">Compress JPG Images</h1>
-                <p class="text-gray-600 max-w-2xl mx-auto">Reduce file size while maintaining quality. Perfect for websites, email attachments, and more.</p>
+                <h1 class="text-3xl font-bold mb-4">Compress PNG Images</h1>
+                <p class="text-gray-600 max-w-2xl mx-auto">Reduce file size of PNG images while preserving transparency and quality. Ideal for websites, apps, and sharing.</p>
             </div>
         </div>
     </div>
@@ -29,23 +29,37 @@
             <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
                 <div class="space-y-6">
                     <div>
-                        <h2 class="text-xl font-semibold mb-3">Quality Settings</h2>
+                        <h2 class="text-xl font-semibold mb-3">Compression Settings</h2>
                         <div class="flex flex-col gap-3">
                             <div>
-                                <label for="quality" class="block text-sm font-medium text-gray-700 mb-1">Compression Quality: @Quality%</label>
-                                <input type="range" min="5" max="95" @bind="Quality" @bind:event="oninput" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                <label for="compression" class="block text-sm font-medium text-gray-700 mb-1">Compression Level: @CompressionLevel</label>
+                                <input type="range" min="1" max="9" @bind="CompressionLevel" @bind:event="oninput" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                                 <div class="flex justify-between text-xs text-gray-500 mt-1">
-                                    <span>Higher Compression</span>
-                                    <span>Better Quality</span>
+                                    <span>Less Compression</span>
+                                    <span>Maximum Compression</span>
                                 </div>
                             </div>
 
                             <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <button @onclick="() => Quality = 20" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">High Compression</button>
-                                <button @onclick="() => Quality = 50" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">Balanced</button>
-                                <button @onclick="() => Quality = 80" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">High Quality</button>
+                                <button @onclick="() => CompressionLevel = 3" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">Light</button>
+                                <button @onclick="() => CompressionLevel = 6" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">Medium</button>
+                                <button @onclick="() => CompressionLevel = 9" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">Maximum</button>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mt-3 space-y-3">
+                        <div class="flex items-center">
+                            <input id="preserve-transparency" type="checkbox" @bind="PreserveTransparency" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                            <label for="preserve-transparency" class="ml-2 block text-sm font-medium text-gray-700">Preserve transparency</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input id="optimize-palette" type="checkbox" @bind="OptimizePalette" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                            <label for="optimize-palette" class="ml-2 block text-sm font-medium text-gray-700">Optimize color palette</label>
+                        </div>
+                        
+                        <p class="text-xs text-gray-500">Color palette optimization may further reduce file size but can slightly affect image quality.</p>
                     </div>
 
                     <div class="border-t border-gray-100 pt-6">
@@ -60,11 +74,10 @@
                         else
                         {
                             <FileUploader 
-                                Accept="image/jpeg" 
-                                AcceptLabel="JPG" 
+                                Accept="image/png" 
+                                AcceptLabel="PNG" 
                                 MaxFileSize="@MaxFileSize" 
-                                OnFilesProcessed="OnFilesProcessed" 
-                                OnFilesSelected="OnFileSelected" />
+                                OnFilesProcessed="OnFilesProcessed" />
                         }
                     </div>
                 </div>
@@ -163,14 +176,15 @@
         }
 
         <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
-            <h2 class="text-xl font-semibold mb-4">About JPG Compression</h2>
+            <h2 class="text-xl font-semibold mb-4">About PNG Compression</h2>
             <div class="prose prose-blue max-w-none">
-                <p>JPEG compression is "lossy," meaning some image data is discarded during compression. Our tool intelligently balances size reduction and quality preservation.</p>
+                <p>PNG compression is "lossless," meaning no image data is discarded during compression. Our tool optimizes the compression algorithm to achieve smaller file sizes without sacrificing quality.</p>
                 <h3>Tips for best results:</h3>
                 <ul>
-                    <li>Use 80-95% quality for photographs where detail is important</li>
-                    <li>Use 50-80% for general web images and social media</li>
-                    <li>Use 10-30% for significant file size reduction when quality is less important</li>
+                    <li>Use high compression level for simple graphics with few colors</li>
+                    <li>Use medium compression for general purpose images</li>
+                    <li>Color palette optimization works best for images with limited colors</li>
+                    <li>Always preserve transparency for images where transparency is important</li>
                 </ul>
                 <p>All processing happens directly in your browser. Your images never leave your device, ensuring complete privacy.</p>
             </div>
@@ -182,7 +196,9 @@
     private List<UploadedFile> UploadedFiles = new();
     private int CompressionProgress = 0;
     private readonly long MaxFileSize = 1024 * 1024 * 15; // 15MB
-    private int Quality = 50; // Default quality setting
+    private int CompressionLevel = 6; // Default compression level (1-9)
+    private bool PreserveTransparency = true; // Default to preserving transparency
+    private bool OptimizePalette = false; // Default to not optimizing palette (can reduce quality)
     private bool isCompressing = false;
     private bool isLoading = false;
 
@@ -226,7 +242,7 @@
                 return;
             }
             
-            var compressedBytes = await CompressJpg(file.FileData);
+            var compressedBytes = await CompressPng(file.FileData);
             file.IsProcessed = true;
             file.ProcessedData = compressedBytes;
             file.ProcessedSize = compressedBytes.Length;
@@ -236,26 +252,63 @@
         }
     }
 
-    private async Task<byte[]> CompressJpg(byte[] fileData)
+    private async Task<byte[]> CompressPng(byte[] fileData)
     {
         try
         {
-            // Load the image with SkiaSharp
+            // Load the PNG image with SkiaSharp
             using var inputData = SKData.CreateCopy(fileData);
             using var original = SKBitmap.Decode(inputData);
-
-            // Create image from bitmap and encode to JPG
-            using var image = SKImage.FromBitmap(original);
-            using var outputData = image.Encode(SKEncodedImageFormat.Jpeg, Quality);
-
-            // Convert to byte array
-            using var memoryStream = new MemoryStream();
-            outputData.SaveTo(memoryStream);
-            return memoryStream.ToArray();
+            
+            // Create the PNG encoder options with a filter flag
+            SKPngEncoderFilterFlags filterFlags = SKPngEncoderFilterFlags.Sub;
+            
+            if (!PreserveTransparency && OptimizePalette)
+            {
+                // Create an RGB bitmap without alpha channel if transparency is not needed
+                using var surface = SKSurface.Create(new SKImageInfo(original.Width, original.Height, SKColorType.Rgba8888));
+                using var canvas = surface.Canvas;
+                
+                // Fill with white background
+                canvas.Clear(SKColors.White);
+                
+                // Draw the original image on top
+                canvas.DrawBitmap(original, 0, 0);
+                
+                // Get the image from the surface
+                using var image = surface.Snapshot();
+                
+                // Create encoder options with compression level
+                var encoderOptions = new SKPngEncoderOptions(filterFlags, (byte)CompressionLevel);
+                
+                // Encode to PNG with quality parameter (using 100 for PNG)
+                using var outputData = image.Encode(SKEncodedImageFormat.Png, 100);
+                
+                // Convert to byte array
+                using var memoryStream = new MemoryStream();
+                outputData.SaveTo(memoryStream);
+                return memoryStream.ToArray();
+            }
+            else
+            {
+                // Just re-encode the original with higher compression
+                using var image = SKImage.FromBitmap(original);
+                
+                // Create encoder options with compression level
+                var encoderOptions = new SKPngEncoderOptions(filterFlags, (byte)CompressionLevel);
+                
+                // Encode to PNG with quality parameter (using 100 for PNG)
+                using var outputData = image.Encode(SKEncodedImageFormat.Png, 100);
+                
+                // Convert to byte array
+                using var memoryStream = new MemoryStream();
+                outputData.SaveTo(memoryStream);
+                return memoryStream.ToArray();
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in CompressJpg: {ex.Message}");
+            Console.WriteLine($"Error in CompressPng: {ex.Message}");
             throw;
         }
     }
@@ -264,8 +317,8 @@
     {
         if (file.IsProcessed && file.ProcessedData != null)
         {
-            string fileName = $"{Path.GetFileNameWithoutExtension(file.FileName)}_compressed.jpg";
-            await FileService.DownloadFile(file.ProcessedData, "image/jpeg", fileName);
+            string fileName = $"{Path.GetFileNameWithoutExtension(file.FileName)}_compressed.png";
+            await FileService.DownloadFile(file.ProcessedData, "image/png", fileName);
         }
     }
 
@@ -274,7 +327,7 @@
         var files = UploadedFiles
             .Where(f => f.IsProcessed && f.ProcessedData != null)
             .ToDictionary(
-                f => $"{Path.GetFileNameWithoutExtension(f.FileName)}_compressed.jpg",
+                f => $"{Path.GetFileNameWithoutExtension(f.FileName)}_compressed.png",
                 f => f.ProcessedData
             );
 
@@ -294,7 +347,7 @@
             
             foreach (var file in files)
             {
-                if (file.ContentType.ToLower() == "image/jpeg")
+                if (file.ContentType.ToLower() == "image/png")
                 {
                     UploadedFiles.Add(file);
                 }
@@ -332,14 +385,8 @@
         return savingsPercent.ToString("0.#");
     }
 
-    private async Task OnFileSelected(InputFileChangeEventArgs e)
-    {
-        // This method is kept for backward compatibility
-        // The actual file processing is now handled in the FileUploader component
-    }
-
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
     }
-}
+} 

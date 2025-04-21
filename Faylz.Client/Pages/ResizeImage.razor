@@ -1,0 +1,468 @@
+@page "/image/resize"
+
+@using System.IO;
+@using System.IO.Compression;
+@using Microsoft.AspNetCore.Components.Forms;
+@using SkiaSharp
+@using Microsoft.JSInterop;
+@using Faylz.Client.Models;
+@using Faylz.Client.Services;
+@inject IJSRuntime JS
+@inject FileService FileService
+
+<PageTitle>Resize Images | Faylz</PageTitle>
+
+<div class="bg-gradient-to-b from-blue-50 to-white pt-12 pb-6">
+    <div class="container mx-auto px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="mb-8 text-center">
+                <h1 class="text-3xl font-bold mb-4">Resize Images</h1>
+                <p class="text-gray-600 max-w-2xl mx-auto">Change image dimensions to exact sizes while preserving quality. Perfect for social media, websites, and prints.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-3">Resize Settings</h2>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="width" class="block text-sm font-medium text-gray-700 mb-1">Width (pixels)</label>
+                                    <input type="number" id="width" @bind="TargetWidth" @bind:event="oninput" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label for="height" class="block text-sm font-medium text-gray-700 mb-1">Height (pixels)</label>
+                                    <input type="number" id="height" @bind="TargetHeight" @bind:event="oninput" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none" />
+                                </div>
+                            </div>
+
+                            <div class="flex items-center">
+                                <input id="maintain-ratio" type="checkbox" @bind="MaintainAspectRatio" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                                <label for="maintain-ratio" class="ml-2 block text-sm font-medium text-gray-700">Maintain aspect ratio</label>
+                            </div>
+
+                            <div class="mt-4">
+                                <h3 class="text-sm font-medium text-gray-700 mb-2">Common Sizes:</h3>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <button @onclick="() => SetPresetSize(1920, 1080)" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm transition">HD (1920×1080)</button>
+                                    <button @onclick="() => SetPresetSize(1280, 720)" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm transition">HD (1280×720)</button>
+                                    <button @onclick="() => SetPresetSize(800, 600)" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm transition">Web (800×600)</button>
+                                    <button @onclick="() => SetPresetSize(1080, 1080)" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm transition">Instagram (1080×1080)</button>
+                                </div>
+                            </div>
+
+                            <div class="mt-2">
+                                <h3 class="text-sm font-medium text-gray-700 mb-2">Quality:</h3>
+                                <div class="flex items-center space-x-2">
+                                    <input type="range" min="50" max="100" @bind="Quality" @bind:event="oninput" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                    <span class="text-gray-700 text-sm">@Quality%</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>Smaller Size</span>
+                                    <span>Better Quality</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 space-y-3">
+                        <div class="flex items-center">
+                            <input id="preserve-format" type="checkbox" @bind="PreserveFormat" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                            <label for="preserve-format" class="ml-2 block text-sm font-medium text-gray-700">Preserve original format</label>
+                        </div>
+
+                        @if (!PreserveFormat)
+                        {
+                            <div>
+                                <label for="output-format" class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+                                <select id="output-format" @bind="OutputFormat" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none">
+                                    <option value="jpeg">JPEG</option>
+                                    <option value="png">PNG</option>
+                                    <option value="webp">WebP</option>
+                                </select>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-6">
+                        <h2 class="text-xl font-semibold mb-3">Upload Images</h2>
+                        @if (isLoading)
+                        {
+                            <div class="flex items-center justify-center p-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
+                                <span>Loading files...</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <FileUploader 
+                                Accept="image/*" 
+                                AcceptLabel="image" 
+                                MaxFileSize="@MaxFileSize" 
+                                OnFilesProcessed="OnFilesProcessed" />
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (UploadedFiles.Count > 0)
+        {
+            <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Your Images</h2>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">@UploadedFiles.Count files</span>
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>Resize Progress:</span>
+                        <span>@ResizeProgress%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: @ResizeProgress%"></div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    @foreach (var file in UploadedFiles)
+                    {
+                        <div class="border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="flex items-center justify-between p-4">
+                                <div class="flex items-center space-x-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">@file.FileName</div>
+                                        @if (file.IsProcessed)
+                                        {
+                                            <div class="text-xs text-gray-500">
+                                                Original: @FormatFileSize(file.OriginalSize) • 
+                                                Resized: @FormatFileSize(file.ProcessedSize)
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-xs text-gray-500">
+                                                Size: @FormatFileSize(file.OriginalSize)
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (file.IsProcessed)
+                                {
+                                    <button @onclick="() => DownloadResizedFile(file)" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition">
+                                        Download
+                                    </button>
+                                }
+                                else if (isResizing)
+                                {
+                                    <div class="flex items-center space-x-2 text-blue-600">
+                                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                        <span class="text-sm">Processing...</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button @onclick="ResizeImages" disabled="@(isResizing || TargetWidth <= 0 || TargetHeight <= 0)" class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition flex justify-center items-center">
+                        @if (isResizing)
+                        {
+                            <div class="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Resizing...</span>
+                        }
+                        else
+                        {
+                            <span>Resize All Images</span>
+                        }
+                    </button>
+
+                    @if (UploadedFiles.Any(f => f.IsProcessed))
+                    {
+                        <button @onclick="DownloadAllAsZip" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition flex-1">
+                            Download All (.zip)
+                        </button>
+                    }
+
+                    <button @onclick="ClearAllFiles" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        }
+
+        <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
+            <h2 class="text-xl font-semibold mb-4">About Image Resizing</h2>
+            <div class="prose prose-blue max-w-none">
+                <p>Our image resizer allows you to resize images to exact dimensions with high quality results. Supported file formats include JPG, PNG, GIF, BMP, and WebP.</p>
+                <h3>Tips for best results:</h3>
+                <ul>
+                    <li>Use "Maintain aspect ratio" to avoid stretching your images</li>
+                    <li>Higher quality setting gives better results but larger file sizes</li>
+                    <li>PNG is best for images with transparency or sharp edges</li>
+                    <li>JPEG is best for photographs and complex images</li>
+                    <li>WebP offers smaller file sizes with similar quality to JPEG and PNG</li>
+                </ul>
+                <div class="mt-4 bg-yellow-50 p-4 rounded-lg">
+                    <p class="text-yellow-800">All processing happens directly in your browser. Your images never leave your device, ensuring complete privacy.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<UploadedFile> UploadedFiles = new();
+    private int ResizeProgress = 0;
+    private readonly long MaxFileSize = 1024 * 1024 * 15; // 15MB
+    private int TargetWidth = 800;
+    private int TargetHeight = 600;
+    private bool MaintainAspectRatio = true;
+    private int Quality = 90;
+    private bool PreserveFormat = true;
+    private string OutputFormat = "jpeg";
+    private bool isResizing = false;
+    private bool isLoading = false;
+
+    private void ClearAllFiles()
+    {
+        UploadedFiles.Clear();
+        ResizeProgress = 0;
+    }
+
+    private void SetPresetSize(int width, int height)
+    {
+        TargetWidth = width;
+        TargetHeight = height;
+    }
+
+    private async Task ResizeImages()
+    {
+        if (UploadedFiles.Count == 0 || isResizing || TargetWidth <= 0 || TargetHeight <= 0) 
+            return;
+
+        try
+        {
+            isResizing = true;
+            ResizeProgress = 0;
+            StateHasChanged();
+
+            var filesToResize = UploadedFiles.Where(f => !f.IsProcessed).ToList();
+            for (int i = 0; i < filesToResize.Count; i++)
+            {
+                await ResizeFile(filesToResize[i]);
+                ResizeProgress = (int)Math.Round((double)(i + 1) / filesToResize.Count * 100);
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            isResizing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResizeFile(UploadedFile file)
+    {
+        try {
+            if (file.FileData == null)
+            {
+                Console.WriteLine("Error: FileData is null");
+                return;
+            }
+            
+            var outputFormat = PreserveFormat ? GetFormatFromMimeType(file.ContentType) : GetOutputFormat();
+            var resizedBytes = await ResizeImageBytes(file.FileData, TargetWidth, TargetHeight, Quality, MaintainAspectRatio, outputFormat);
+            file.IsProcessed = true;
+            file.ProcessedData = resizedBytes;
+            file.ProcessedSize = resizedBytes.Length;
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Error resizing file: {ex.Message}");
+        }
+    }
+
+    private async Task<byte[]> ResizeImageBytes(byte[] fileData, int width, int height, int quality, bool maintainAspectRatio, SKEncodedImageFormat outputFormat)
+    {
+        try
+        {
+            // Load the image with SkiaSharp
+            using var inputData = SKData.CreateCopy(fileData);
+            using var original = SKBitmap.Decode(inputData);
+            
+            // Calculate new dimensions if maintaining aspect ratio
+            int newWidth = width;
+            int newHeight = height;
+            
+            if (maintainAspectRatio)
+            {
+                double aspectRatio = (double)original.Width / original.Height;
+                
+                // Calculate dimensions based on width
+                double heightFromWidth = newWidth / aspectRatio;
+                
+                // Calculate dimensions based on height
+                double widthFromHeight = newHeight * aspectRatio;
+                
+                // Choose the one that fits within target dimensions
+                if (heightFromWidth <= newHeight)
+                {
+                    newHeight = (int)Math.Round(heightFromWidth);
+                }
+                else
+                {
+                    newWidth = (int)Math.Round(widthFromHeight);
+                }
+            }
+            
+            // Create a new bitmap with the target dimensions
+            var resizeInfo = new SKImageInfo(newWidth, newHeight);
+            using var scaledBitmap = original.Resize(resizeInfo, SKSamplingOptions.Default);
+            using var image = SKImage.FromBitmap(scaledBitmap);
+            
+            // Encode with the specified format and quality
+            using var outputData = image.Encode(outputFormat, quality);
+            
+            // Convert to byte array
+            using var memoryStream = new MemoryStream();
+            outputData.SaveTo(memoryStream);
+            return memoryStream.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in ResizeImage: {ex.Message}");
+            throw;
+        }
+    }
+
+    private SKEncodedImageFormat GetFormatFromMimeType(string mimeType)
+    {
+        return mimeType.ToLower() switch
+        {
+            "image/png" => SKEncodedImageFormat.Png,
+            "image/webp" => SKEncodedImageFormat.Webp,
+            "image/gif" => SKEncodedImageFormat.Gif,
+            "image/bmp" => SKEncodedImageFormat.Bmp,
+            _ => SKEncodedImageFormat.Jpeg
+        };
+    }
+
+    private SKEncodedImageFormat GetOutputFormat()
+    {
+        return OutputFormat switch
+        {
+            "png" => SKEncodedImageFormat.Png,
+            "webp" => SKEncodedImageFormat.Webp,
+            _ => SKEncodedImageFormat.Jpeg
+        };
+    }
+
+    private async Task DownloadResizedFile(UploadedFile file)
+    {
+        if (file.IsProcessed && file.ProcessedData != null)
+        {
+            string fileExtension = GetFileExtension(PreserveFormat ? GetFormatFromMimeType(file.ContentType) : GetOutputFormat());
+            string fileName = $"{Path.GetFileNameWithoutExtension(file.FileName)}_resized{fileExtension}";
+            string mimeType = GetMimeType(fileExtension);
+            await FileService.DownloadFile(file.ProcessedData, mimeType, fileName);
+        }
+    }
+
+    private string GetFileExtension(SKEncodedImageFormat format)
+    {
+        return format switch
+        {
+            SKEncodedImageFormat.Png => ".png",
+            SKEncodedImageFormat.Webp => ".webp",
+            SKEncodedImageFormat.Gif => ".gif",
+            SKEncodedImageFormat.Bmp => ".bmp",
+            _ => ".jpg"
+        };
+    }
+
+    private string GetMimeType(string fileExtension)
+    {
+        return fileExtension switch
+        {
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            _ => "image/jpeg"
+        };
+    }
+
+    private async Task DownloadAllAsZip()
+    {
+        var files = new Dictionary<string, byte[]>();
+        
+        foreach (var file in UploadedFiles.Where(f => f.IsProcessed && f.ProcessedData != null))
+        {
+            string fileExtension = GetFileExtension(PreserveFormat ? GetFormatFromMimeType(file.ContentType) : GetOutputFormat());
+            string fileName = $"{Path.GetFileNameWithoutExtension(file.FileName)}_resized{fileExtension}";
+            files[fileName] = file.ProcessedData;
+        }
+
+        if (files.Count > 0)
+        {
+            var zipData = await FileService.CreateZipArchiveAsync(files);
+            await FileService.DownloadFile(zipData, "application/zip", "resized_images.zip");
+        }
+    }
+
+    private async Task OnFilesProcessed(List<UploadedFile> files)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            foreach (var file in files)
+            {
+                // Check if it's a supported image format
+                if (file.ContentType.StartsWith("image/"))
+                {
+                    UploadedFiles.Add(file);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing files: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+} 
