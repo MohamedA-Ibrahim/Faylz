@@ -1,0 +1,86 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+<div 
+    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-blue-50 transition-colors duration-150 @(isDragging ? "bg-blue-50 border-blue-300" : "")" 
+    @ondragenter="HandleDragEnter" 
+    @ondragleave="HandleDragLeave"
+    @ondragover:preventDefault
+    @ondrop:preventDefault
+    @ondrop="HandleDrop"
+    @onclick="ClickInputFile">
+    
+    <div class="space-y-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <div class="font-medium text-gray-900">Drag & drop @AcceptLabel files here</div>
+        <div class="text-gray-500 text-sm">or click to browse files</div>
+    </div>
+    
+    <InputFile @ref="inputFile" OnChange="HandleFileSelected" class="hidden" accept="@Accept" multiple="@Multiple" />
+</div>
+
+@code {
+    private InputFile? inputFile;
+    private bool isDragging = false;
+    
+    [Parameter]
+    public string Accept { get; set; } = "*/*";
+    
+    [Parameter]
+    public string AcceptLabel { get; set; } = "";
+    
+    [Parameter]
+    public bool Multiple { get; set; } = true;
+    
+    [Parameter]
+    public long MaxFileSize { get; set; } = 1024 * 1024 * 15; // 15MB default
+    
+    [Parameter]
+    public EventCallback<InputFileChangeEventArgs> OnFilesSelected { get; set; }
+
+    private void HandleDragEnter()
+    {
+        isDragging = true;
+    }
+
+    private void HandleDragLeave()
+    {
+        isDragging = false;
+    }
+
+    private async Task HandleDrop()
+    {
+        isDragging = false;
+        // Actual file handling is done by InputFile component
+    }
+
+    private async Task ClickInputFile()
+    {
+        if (inputFile != null)
+        {
+            await JS.InvokeVoidAsync("clickElement", inputFile.Element);
+        }
+    }
+    
+    private Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        return OnFilesSelected.InvokeAsync(e);
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                window.clickElement = function(element) {
+                    if (element) {
+                        element.click();
+                    }
+                }
+            ");
+        }
+    }
+} 
