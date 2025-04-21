@@ -50,11 +50,22 @@
 
                     <div class="border-t border-gray-100 pt-6">
                         <h2 class="text-xl font-semibold mb-3">Upload Images</h2>
-                        <FileUploader 
-                            Accept="image/jpeg" 
-                            AcceptLabel="JPG" 
-                            MaxFileSize="@MaxFileSize" 
-                            OnFilesSelected="OnFileSelected" />
+                        @if (isLoading)
+                        {
+                            <div class="flex items-center justify-center p-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
+                                <span>Loading files...</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <FileUploader 
+                                Accept="image/jpeg" 
+                                AcceptLabel="JPG" 
+                                MaxFileSize="@MaxFileSize" 
+                                OnFilesProcessed="OnFilesProcessed" 
+                                OnFilesSelected="OnFileSelected" />
+                        }
                     </div>
                 </div>
             </div>
@@ -136,14 +147,14 @@
                             <span>Compress All Images</span>
                         }
                     </button>
-                    
+
                     @if (UploadedFiles.Any(f => f.IsProcessed))
                     {
                         <button @onclick="DownloadAllAsZip" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition flex-1">
                             Download All (.zip)
                         </button>
                     }
-                    
+
                     <button @onclick="ClearAllFiles" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition">
                         Clear All
                     </button>
@@ -173,6 +184,7 @@
     private readonly long MaxFileSize = 1024 * 1024 * 15; // 15MB
     private int Quality = 50; // Default quality setting
     private bool isCompressing = false;
+    private bool isLoading = false;
 
     private void ClearAllFiles()
     {
@@ -184,22 +196,31 @@
     {
         if (UploadedFiles.Count == 0 || isCompressing) return;
 
-        isCompressing = true;
-        CompressionProgress = 0;
-
-        foreach (var file in UploadedFiles.Where(f => !f.IsProcessed))
+        try
         {
-            await CompressFile(file);
-            CompressionProgress = (int)Math.Round((double)UploadedFiles.Count(f => f.IsProcessed) / UploadedFiles.Count * 100);
-        }
+            isCompressing = true;
+            CompressionProgress = 0;
+            StateHasChanged();
 
-        isCompressing = false;
+            var filesToCompress = UploadedFiles.Where(f => !f.IsProcessed).ToList();
+            for (int i = 0; i < filesToCompress.Count; i++)
+            {
+                await CompressFile(filesToCompress[i]);
+                CompressionProgress = (int)Math.Round((double)(i + 1) / filesToCompress.Count * 100);
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            isCompressing = false;
+            StateHasChanged();
+        }
     }
 
     private async Task CompressFile(UploadedFile file)
     {
         try {
-            var compressedBytes = await CompressJpg(file.File);
+            var compressedBytes = await CompressJpg(file.FileData);
             file.IsProcessed = true;
             file.ProcessedData = compressedBytes;
             file.ProcessedSize = compressedBytes.Length;
@@ -210,23 +231,28 @@
         }
     }
 
-    private async Task<byte[]> CompressJpg(IBrowserFile file)
+    private async Task<byte[]> CompressJpg(byte[] fileData)
     {
-        // Read the file bytes using the FileService
-        var fileData = await FileService.ReadFileBytesAsync(file, MaxFileSize);
-        
-        // Load the image with SkiaSharp
-        using var inputData = SKData.CreateCopy(fileData);
-        using var original = SKBitmap.Decode(inputData);
-        
-        // Create image from bitmap and encode to JPG
-        using var image = SKImage.FromBitmap(original);
-        using var outputData = image.Encode(SKEncodedImageFormat.Jpeg, Quality);
-        
-        // Convert to byte array
-        using var memoryStream = new MemoryStream();
-        outputData.SaveTo(memoryStream);
-        return memoryStream.ToArray();
+        try
+        {
+            // Load the image with SkiaSharp
+            using var inputData = SKData.CreateCopy(fileData);
+            using var original = SKBitmap.Decode(inputData);
+
+            // Create image from bitmap and encode to JPG
+            using var image = SKImage.FromBitmap(original);
+            using var outputData = image.Encode(SKEncodedImageFormat.Jpeg, Quality);
+
+            // Convert to byte array
+            using var memoryStream = new MemoryStream();
+            outputData.SaveTo(memoryStream);
+            return memoryStream.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in CompressJpg: {ex.Message}");
+            throw;
+        }
     }
 
     private async Task DownloadCompressedFile(UploadedFile file)
@@ -246,7 +272,7 @@
                 f => $"{Path.GetFileNameWithoutExtension(f.FileName)}_compressed.jpg",
                 f => f.ProcessedData
             );
-            
+
         if (files.Count > 0)
         {
             var zipData = await FileService.CreateZipArchiveAsync(files);
@@ -254,20 +280,29 @@
         }
     }
 
-    private void OnFileSelected(InputFileChangeEventArgs e)
+    private async Task OnFilesProcessed(List<UploadedFile> files)
     {
-        foreach (var file in e.GetMultipleFiles(10)) // Limiting to 10 files at once
+        try
         {
-            if (file.ContentType.ToLower() == "image/jpeg")
+            isLoading = true;
+            StateHasChanged();
+            
+            foreach (var file in files)
             {
-                var uploadedFile = new UploadedFile 
-                { 
-                    FileName = file.Name, 
-                    File = file,
-                    OriginalSize = file.Size
-                };
-                UploadedFiles.Add(uploadedFile);
+                if (file.ContentType.ToLower() == "image/jpeg")
+                {
+                    UploadedFiles.Add(file);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing files: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -292,11 +327,14 @@
         return savingsPercent.ToString("0.#");
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
     {
-        if (firstRender)
-        {
-            await FileService.InitializeJsInterop();
-        }
+        // This method is kept for backward compatibility
+        // The actual file processing is now handled in the FileUploader component
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
     }
 }

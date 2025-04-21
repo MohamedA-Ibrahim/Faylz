@@ -221,6 +221,9 @@
   }
 }
 @layer utilities {
+  .absolute {
+    position: absolute;
+  }
   .fixed {
     position: fixed;
   }
@@ -364,6 +367,9 @@
   }
   .h-32 {
     height: calc(var(--spacing) * 32);
+  }
+  .h-full {
+    height: 100%;
   }
   .max-h-full {
     max-height: 100%;
@@ -838,6 +844,9 @@
   }
   .accent-blue-600 {
     accent-color: var(--color-blue-600);
+  }
+  .opacity-0 {
+    opacity: 0%;
   }
   .shadow-lg {
     --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
