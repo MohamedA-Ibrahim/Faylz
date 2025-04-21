@@ -1,19 +1,45 @@
-﻿<NavLink class="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition cursor-pointer relative" href="@GetLink()" disabled="@(!RendererInfo.IsInteractive || IsComingSoon)">
-    <h2 class="text-xl font-semibold mb-2">@Title</h2>
-    <p class="text-gray-600 mb-4">@Description</p>
-    @if (IsComingSoon)
-    {
-        <div class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">Coming Soon</div>
-    }
+﻿<NavLink class="block bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden" href="@GetLink()" disabled="@(!RendererInfo.IsInteractive || IsComingSoon)">
+    <div class="p-6">
+        <div class="flex justify-between items-start mb-3">
+            <h2 class="text-xl font-semibold text-gray-800">@Title</h2>
+            @if (IsComingSoon)
+            {
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                    Coming Soon
+                </span>
+            }
+            else if (IsNew)
+            {
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    New
+                </span>
+            }
+        </div>
+        <p class="text-gray-600 mb-4">@Description</p>
+        <div class="flex justify-between items-center">
+            <div class="text-sm font-medium text-blue-600">
+                @if (!IsComingSoon)
+                {
+                    <span>Use Tool</span>
+                }
+                else
+                {
+                    <span>Notify Me</span>
+                }
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </div>
+    </div>
 </NavLink>
-
-
 
 @code {
     [Parameter] public string Title { get; set; } = "";
     [Parameter] public string Description { get; set; } = "";
     [Parameter] public string Link { get; set; } = "";
     [Parameter] public bool IsComingSoon { get; set; } = false;
+    [Parameter] public bool IsNew { get; set; } = false;
 
     private string GetLink() {
         if (IsComingSoon)

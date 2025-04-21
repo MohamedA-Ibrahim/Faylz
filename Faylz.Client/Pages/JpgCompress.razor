@@ -9,176 +9,349 @@
 @using SixLabors.ImageSharp.Processing.Processors.Transforms
 @using SkiaSharp
 @using Microsoft.JSInterop;
+@inject IJSRuntime JS
 
-<PageTitle>Compress JPG Images</PageTitle>
+<PageTitle>Compress JPG Images | Faylz</PageTitle>
 
-<div class="container mx-auto p-6">
-    <h1 class="text-3xl font-bold text-center mb-4">Compress JPG Images</h1>
-    <p class="text-center text-gray-600 mb-6">Drag and drop your JPG images to compress them.</p>
-
-    <div class="border-2 border-dashed border-gray-300 p-6 text-center rounded-lg relative" ondrop="dropHandler(event)" ondragover="allowDrop(event)">
-        <p class="text-gray-500">Drag and drop images here or click to select files</p>
-        <InputFile multiple accept="image/jpeg" OnChange="OnFileSelected" class="absolute inset-0 opacity-0 cursor-pointer" />
-    </div>
-
-    <div class="mt-6" hidden="@(UploadedFiles.Count == 0)">
-        <p class="text-gray-700">Total Images: @UploadedFiles.Count</p>
-        <progress class="w-full h-3 mt-2" max="100" value="@CompressionProgress"></progress>
-
-        <ul class="mt-4 space-y-3">
-            @foreach (var file in UploadedFiles)
-            {
-                <li class="bg-white p-3 rounded-lg shadow-md flex justify-between items-center">
-                    <span>@file.FileName</span>
-                    @if (file.IsCompressed)
-                    {
-                        <a class="text-blue-500"  download>Download</a>
-                        <span>@file.CompressedUrl</span>
-                    }
-                    else
-                    {
-                        <span class="text-yellow-500">Processing...</span>
-                    }
-                </li>
-            }
-        </ul>
-
-        <button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition" @onclick="CompressImages">Compress</button>
-    </div>
-
-    @*   @if (AllCompressed)
-    {
-        <div class="mt-6 text-center">
-            <a class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition" href="@ZipDownloadUrl" download>Download All as ZIP</a>
+<div class="bg-gradient-to-b from-blue-50 to-white pt-12 pb-6">
+    <div class="container mx-auto px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="mb-8 text-center">
+                <h1 class="text-3xl font-bold mb-4">Compress JPG Images</h1>
+                <p class="text-gray-600 max-w-2xl mx-auto">Reduce file size while maintaining quality. Perfect for websites, email attachments, and more.</p>
+            </div>
         </div>
-    } *@
+    </div>
+</div>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-3">Quality Settings</h2>
+                        <div class="flex flex-col gap-3">
+                            <div>
+                                <label for="quality" class="block text-sm font-medium text-gray-700 mb-1">Compression Quality: @Quality%</label>
+                                <input type="range" min="5" max="95" @bind="Quality" @bind:event="oninput" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>Higher Compression</span>
+                                    <span>Better Quality</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <button @onclick="() => Quality = 20" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">High Compression</button>
+                                <button @onclick="() => Quality = 50" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">Balanced</button>
+                                <button @onclick="() => Quality = 80" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm transition">High Quality</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-6">
+                        <h2 class="text-xl font-semibold mb-3">Upload Images</h2>
+                        <div 
+                            class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-blue-50 transition-colors duration-150 @(isDragging ? "bg-blue-50 border-blue-300" : "")" 
+                            @ondragenter="HandleDragEnter" 
+                            @ondragleave="HandleDragLeave"
+                            @ondragover:preventDefault
+                            @ondrop:preventDefault
+                            @ondrop="HandleDrop"
+                            @onclick="ClickInputFile">
+                            
+                            <div class="space-y-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <div class="font-medium text-gray-900">Drag & drop JPG files here</div>
+                                <div class="text-gray-500 text-sm">or click to browse files</div>
+                            </div>
+                            
+                            <InputFile @ref="inputFile" OnChange="OnFileSelected" class="hidden" accept="image/jpeg" multiple />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (UploadedFiles.Count > 0)
+        {
+            <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Your Images</h2>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">@UploadedFiles.Count files</span>
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>Compression Progress:</span>
+                        <span>@CompressionProgress%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: @CompressionProgress%"></div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    @foreach (var file in UploadedFiles)
+                    {
+                        <div class="border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="flex items-center justify-between p-4">
+                                <div class="flex items-center space-x-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">@file.FileName</div>
+                                        @if (file.OriginalSize > 0 && file.CompressedSize > 0)
+                                        {
+                                            <div class="text-xs text-gray-500">
+                                                Original: @FormatFileSize(file.OriginalSize) • 
+                                                Compressed: @FormatFileSize(file.CompressedSize) • 
+                                                Saved: @GetSavingsPercentage(file)%
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-xs text-gray-500">
+                                                Original: @FormatFileSize(file.OriginalSize)
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (file.IsCompressed)
+                                {
+                                    <button @onclick="() => DownloadCompressedFile(file)" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition">
+                                        Download
+                                    </button>
+                                }
+                                else if (isCompressing)
+                                {
+                                    <div class="flex items-center space-x-2 text-blue-600">
+                                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                        <span class="text-sm">Processing...</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button @onclick="CompressImages" disabled="@isCompressing" class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition flex justify-center items-center">
+                        @if (isCompressing)
+                        {
+                            <div class="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Compressing...</span>
+                        }
+                        else
+                        {
+                            <span>Compress All Images</span>
+                        }
+                    </button>
+                    
+                    @if (UploadedFiles.Any(f => f.IsCompressed))
+                    {
+                        <button @onclick="DownloadAllAsZip" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition flex-1">
+                            Download All (.zip)
+                        </button>
+                    }
+                    
+                    <button @onclick="ClearAllFiles" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        }
+
+        <div class="bg-white rounded-xl shadow-md p-8 border border-gray-100">
+            <h2 class="text-xl font-semibold mb-4">About JPG Compression</h2>
+            <div class="prose prose-blue max-w-none">
+                <p>JPEG compression is "lossy," meaning some image data is discarded during compression. Our tool intelligently balances size reduction and quality preservation.</p>
+                <h3>Tips for best results:</h3>
+                <ul>
+                    <li>Use 80-95% quality for photographs where detail is important</li>
+                    <li>Use 50-80% for general web images and social media</li>
+                    <li>Use 10-30% for significant file size reduction when quality is less important</li>
+                </ul>
+                <p>All processing happens directly in your browser. Your images never leave your device, ensuring complete privacy.</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
+    private InputFile? inputFile;
     private List<UploadedFile> UploadedFiles = new();
     private int CompressionProgress = 0;
-    private bool AllCompressed => UploadedFiles.All(f => f.IsCompressed);
-    // private string ZipDownloadUrl = "";
+    private long maxFileSize = 1024 * 1024 * 15; // 15MB
+    private int Quality = 50; // Default quality setting
+    private bool isDragging = false;
+    private bool isCompressing = false;
 
-    private long maxFileSize = 1024 * 1024 * 15;
+    private void HandleDragEnter()
+    {
+        isDragging = true;
+    }
 
+    private void HandleDragLeave()
+    {
+        isDragging = false;
+    }
 
+    private async Task HandleDrop()
+    {
+        isDragging = false;
+        // Actual file handling is done by InputFile component
+    }
+
+    private async Task ClickInputFile()
+    {
+        if (inputFile != null)
+        {
+            await JS.InvokeVoidAsync("clickElement", inputFile.Element);
+        }
+    }
+
+    private void ClearAllFiles()
+    {
+        UploadedFiles.Clear();
+        CompressionProgress = 0;
+    }
 
     private async Task CompressImages()
     {
+        if (UploadedFiles.Count == 0 || isCompressing) return;
+
+        isCompressing = true;
         CompressionProgress = 0;
-        //string zipPath = Path.Combine(Path.GetTempPath(), "compressed_images.zip");
 
-        foreach (var file in UploadedFiles)
+        foreach (var file in UploadedFiles.Where(f => !f.IsCompressed))
         {
-            var compressedFilePath = await CompressJpg(file.File);
-            file.IsCompressed = true;
-            file.CompressedUrl = compressedFilePath;
-
-            CompressionProgress += 100 / UploadedFiles.Count;
+            await CompressFile(file);
+            CompressionProgress = (int)Math.Round((double)UploadedFiles.Count(f => f.IsCompressed) / UploadedFiles.Count * 100);
         }
-        // using (var zipArchive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
-        // {
 
-        // }
-        //ZipDownloadUrl = zipPath;
+        isCompressing = false;
     }
 
-
-    private async Task<string> CompressJpg(IBrowserFile file)
+    private async Task CompressFile(UploadedFile file)
     {
-        var tempFilePath = Path.GetTempFileName();
-
-        //using var inputStream = file.OpenReadStream(maxFileSize);
-        //using var skImage = SKBitmap.Decode(inputStream);
-        //using var image = SKImage.FromBitmap(skImage);
-        //using var data = image.Encode(SKEncodedImageFormat.Jpeg, 50);
-
-        var bytes = await ConvertImageToByteArray(file);
-        await File.WriteAllBytesAsync(tempFilePath, bytes);
-
-        return tempFilePath;
+        try {
+            var compressedBytes = await CompressJpg(file.File);
+            file.IsCompressed = true;
+            file.CompressedData = compressedBytes;
+            file.CompressedSize = compressedBytes.Length;
+        }
+        catch (Exception ex) {
+            // Handle exception
+            Console.WriteLine($"Error compressing file: {ex.Message}");
+        }
     }
+
+    private async Task<byte[]> CompressJpg(IBrowserFile file)
+    {
+        using var memoryStream = new MemoryStream();
+        using var image = await Image.LoadAsync(file.OpenReadStream(maxFileSize));
+        
+        // Configure the encoder with quality setting
+        var encoder = new JpegEncoder()
+        {
+            Quality = Quality
+        };
+
+        // Save to the memory stream with specified quality
+        await image.SaveAsync(memoryStream, encoder);
+        return memoryStream.ToArray();
+    }
+
+    private async Task DownloadCompressedFile(UploadedFile file)
+    {
+        if (file.IsCompressed && file.CompressedData != null)
+        {
+            // Use JSRuntime to trigger a download
+            string fileName = $"{Path.GetFileNameWithoutExtension(file.FileName)}_compressed.jpg";
+            await JS.InvokeVoidAsync("downloadFile", Convert.ToBase64String(file.CompressedData), "image/jpeg", fileName);
+        }
+    }
+
+    private async Task DownloadAllAsZip()
+    {
+        // Implement ZIP download functionality here
+        // Use JSRuntime to trigger a ZIP download containing all compressed files
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(10)) // Limiting to 10 files at once
+        {
+            if (file.ContentType.ToLower() == "image/jpeg")
+            {
+                var uploadedFile = new UploadedFile 
+                { 
+                    FileName = file.Name, 
+                    File = file,
+                    OriginalSize = file.Size
+                };
+                UploadedFiles.Add(uploadedFile);
+            }
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private string GetSavingsPercentage(UploadedFile file)
+    {
+        if (file.OriginalSize <= 0 || file.CompressedSize <= 0) return "0";
+        
+        double savingsPercent = ((double)(file.OriginalSize - file.CompressedSize) / file.OriginalSize) * 100;
+        return savingsPercent.ToString("0.#");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                window.downloadFile = function(base64Data, contentType, fileName) {
+                    const linkSource = `data:${contentType};base64,${base64Data}`;
+                    const downloadLink = document.createElement('a');
+                    document.body.appendChild(downloadLink);
+                    downloadLink.href = linkSource;
+                    downloadLink.download = fileName;
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                }
+
+                window.clickElement = function(element) {
+                    if (element) {
+                        element.click();
+                    }
+                }
+            ");
+        }
+    }
+
     private class UploadedFile
     {
         public string FileName { get; set; } = "";
         public IBrowserFile? File { get; set; }
         public bool IsCompressed { get; set; } = false;
-        public string CompressedUrl { get; set; } = "";
+        public byte[]? CompressedData { get; set; }
+        public long OriginalSize { get; set; }
+        public long CompressedSize { get; set; }
     }
-
-    private async Task<byte[]> ConvertImageToByteArray(IBrowserFile inputImage)
-    {
-        byte[] result = null;
-
-        // memory stream
-        using (var memoryStream = new MemoryStream())
-        using (var image = await Image.LoadAsync(inputImage.OpenReadStream(maxFileSize))) // IFormFile inputImage
-        {
-            //var before = memoryStream.Length; Removed this, assuming you are using for debugging?
-            var beforeMutations = image.Size;
-
-            // dummy resize options
-            int width = 50;
-            int height = 100;
-            IResampler sampler = KnownResamplers.Lanczos3;
-            bool compand = true;
-            ResizeMode mode = ResizeMode.Stretch;
-
-            // init resize object
-            var resizeOptions = new ResizeOptions
-                {
-                    Size = new Size(width, height),
-                    Sampler = sampler,
-                    Compand = compand,
-                    Mode = mode
-                };
-
-            // mutate image
-            image.Mutate(x => x
-                 .Resize(resizeOptions)
-                 .Rotate(35));
-
-            var afterMutations = image.Size;
-
-            //Encode here for quality
-            var encoder = new JpegEncoder()
-                {
-                    Quality = 30 //Use variable to set between 5-30 based on your requirements
-                };
-
-            //This saves to the memoryStream with encoder
-            image.Save(memoryStream, encoder);
-            memoryStream.Position = 0; // The position needs to be reset.
-
-            // prepare result to byte[]
-            result = memoryStream.ToArray();
-
-            return result;
-        }
-    }
-
-    private void OnFileSelected(InputFileChangeEventArgs e)
-    {
-
-        foreach (var file in e.GetMultipleFiles())
-        {
-            UploadedFiles.Add(new UploadedFile { FileName = file.Name, File = file });
-        }
-    }
-
 }
-
-<script>
-    function allowDrop(ev) {
-        ev.preventDefault();
-    }
-
-    function dropHandler(ev) {
-        ev.preventDefault();
-        let files = ev.dataTransfer.files;
-        if (files.length > 0) {
-            DotNet.invokeMethodAsync('Faylz.Client', 'OnFileSelected', files);
-        }
-    }
-</script>
