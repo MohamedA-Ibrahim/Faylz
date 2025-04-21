@@ -1,4 +1,4 @@
-﻿<NavLink class="block bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden" href="@GetLink()" disabled="@(!RendererInfo.IsInteractive || IsComingSoon)">
+﻿<NavLink class="block bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer" href="@GetLink()" disabled="@(!RendererInfo.IsInteractive || IsComingSoon)">
     <div class="p-6">
         <div class="flex justify-between items-start mb-3">
             <h2 class="text-xl font-semibold text-gray-800">@Title</h2>
@@ -22,10 +22,6 @@
                 {
                     <span>Use Tool</span>
                 }
-                else
-                {
-                    <span>Notify Me</span>
-                }
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -42,9 +38,6 @@
     [Parameter] public bool IsNew { get; set; } = false;
 
     private string GetLink() {
-        if (IsComingSoon)
-            return "#";
-        else
-            return Link;
+        return IsComingSoon ? "#" : Link;
     }
 }
